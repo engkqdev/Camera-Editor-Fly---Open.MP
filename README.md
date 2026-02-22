@@ -1,13 +1,13 @@
 # Camera-Editor-Fly --- Open.MP
 
-Sistem editor kamera berbasis navigasi *free-roam* (fly mode) yang dirancang khusus untuk lingkungan **open.mp** dan **SA-MP**. Alat ini mempermudah pembuatan transisi sinematik dengan akurasi tinggi pada posisi koordinat dan arah pandang (*look-at*).
+Sistem editor kamera berbasis navigasi *free-roam* (fly mode) yang dirancang untuk lingkungan **open.mp** dan **SA-MP**. Alat ini mempermudah pembuatan transisi sinematik dengan akurasi tinggi pada posisi koordinat dan arah pandang (*look-at*).
 
 ---
 
 ## 🛠 Informasi Penting
 **Copyright (c) 2026 Engkq.**
 
-Script ini sepenuhnya hasil riset dan pengembangan saya sendiri **Engkq**. Saya sangat terbuka bagi siapa pun yang ingin menggunakan atau memodifikasi script ini untuk kebutuhan server. Namun, saya minta satu hal: **Hargai penulis asli.** Jangan menghapus kredit hanya untuk pengakuan sepihak. Jika kamu melakukan perubahan, cukup tambahkan namamu sebagai kontributor di bawah nama pengembang asli.
+Script ini sepenuhnya hasil riset dan pengembangan saya sendiri **Engkq**. Saya sangat terbuka bagi siapa pun yang ingin menggunakan atau memodifikasi script ini untuk kebutuhan server. Namun, saya minta satu hal: **Hargai Pembuat Script.** Jangan menghapus/mengganti kredit hanya untuk validasi. Jika kamu melakukan perubahan, cukup tambahkan namamu sebagai kontributor di bawah nama pengembang asli.
 
 ---
 
