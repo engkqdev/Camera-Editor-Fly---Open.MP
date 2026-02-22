@@ -31,11 +31,11 @@
 #define MOVE_BACK_L             7
 #define MOVE_BACK_R             8
 
-#define DIALOG_MENU             1678
-#define DIALOG_MOVE_SPEED       1679
-#define DIALOG_ROT_SPEED        1680
-#define DIALOG_EXPORTNAME       1681
-#define DIALOG_CLOSE_NEW        1682
+#define DIALOG_MENU             8878
+#define DIALOG_MOVE_SPEED       8879
+#define DIALOG_ROT_SPEED        8880
+#define DIALOG_EXPORTNAME       8881
+#define DIALOG_CLOSE_NEW        8882
 
 //==========================================================================
 // VARIABLES & ENUMS
@@ -81,6 +81,8 @@ enum Coordinates
 
 static coordInfo[MAX_PLAYERS][Coordinates];
 
+forward bool:IsStringNumeric(const szInput[]);
+
 //==========================================================================
 // HOOKS
 //==========================================================================
@@ -89,7 +91,6 @@ hook OnPlayerDisconnect(playerid, reason)
 {
     if (noclipdata[playerid][cameramode] == CAMERA_MODE_FLY) 
     {
-        // Fungsi CancelFlyMode harus ada di dalam include ini nanti
         CancelFlyMode(playerid);
     }
     return 1;
@@ -134,6 +135,16 @@ hook OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
     {
         if (IsCreating[playerid] == true)
         {
+            if ((newkeys & KEY_FIRE) && !(oldkeys & KEY_FIRE))
+            {
+                // Pastikan pemain sedang menggunakan editor
+                if (IsCreating[playerid])
+                {
+                    // Panggil fungsi utama untuk memproses titik kamera
+                    ProcessCameraPoint(playerid);
+                    return 1;
+                }
+            }
             if (SettingFirstLoc[playerid] == true)
             {
                 GetPlayerCameraPos(playerid, fPX, fPY, fPZ);
@@ -212,11 +223,17 @@ hook OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 // COMMANDS
 //==========================================================================
 
+CMD:setpoint(playerid, params[])
+{
+    if (!IsCreating[playerid]) 
+        return SendClientMessage(playerid, -1, "{FF0000}Error: {FFFFFF}Editor kamera tidak aktif!");
+
+    ProcessCameraPoint(playerid);
+    return 1;
+}
 
 CMD:cameditor(playerid, params[])
 {
-    if(PlayerData[playerid][pAdmin] < 1)
-        return SendErrorMessage(playerid, "Kamu harus menjadi Admin level 1.");
 
     if (IsCamMoving[playerid]) 
         return SendClientMessage(playerid, -1, "{F58282}Error: {FFFFFF}Tunggu hingga pergerakan kamera selesai.");
@@ -228,15 +245,13 @@ CMD:cameditor(playerid, params[])
     }
     else 
     {
-        FlyMode(playerid); // Pastikan fungsi FlyMode sudah ada di dalam .inc
+        FlyMode(playerid);
     }
     return 1;
 }
 
 CMD:closecameditor(playerid, params[])
 {
-    if(PlayerData[playerid][pAdmin] < 1)
-        return SendErrorMessage(playerid, "Kamu harus menjadi Admin level 1.");
 
     if (!IsCreating[playerid])
     {
@@ -272,7 +287,6 @@ CMD:closecameditor(playerid, params[])
 
 hook OnPlayerUpdate(playerid)
 {
-    // Hanya proses jika pemain sedang dalam mode kamera terbang
     if (noclipdata[playerid][cameramode] == CAMERA_MODE_FLY)
     {
         new KEY:keys, updown, leftright;
@@ -308,13 +322,14 @@ hook OnPlayerUpdate(playerid)
     return 1;
 }
 
-hook OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+hook OnDialogResponse@CamEditor(playerid, dialogid, response, listitem, inputtext[])
 {
     switch(dialogid)
     {
-        case DIALOG_MENU:
+    case DIALOG_MENU:
         {
-            if (!response) {
+            if (!response) 
+            {
                 CancelFlyMode(playerid);
                 IsCreating[playerid] = false;
                 return SendClientMessage(playerid, -1, "{F58282}Editor:{FFFFFF} Kamu telah keluar dari editor.");
@@ -323,9 +338,21 @@ hook OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             switch(listitem)
             {
                 case 0: PreviewMovement(playerid);
-                case 1: SetupCameraPoint(playerid, true);  // Re-set Start
-                case 2: SetupCameraPoint(playerid, false); // Re-set End
-                case 3: ShowSpeedDialog(playerid, DIALOG_MOVE_SPEED);
+                case 1: 
+                { // Re-set Start
+                    IsReSettingStart[playerid] = true;
+                    SettingFirstLoc[playerid] = true;
+                    SettingLastLoc[playerid] = false;
+                    SendClientMessage(playerid, -1, "{FFFF00}Cari posisi {8EFF8E}START{FFFF00} baru dan tekan FIRE.");
+                }
+                case 2: 
+                { // Re-set End
+                    IsReSettingEnd[playerid] = true;
+                    SettingLastLoc[playerid] = true;
+                    SettingFirstLoc[playerid] = false;
+                    SendClientMessage(playerid, -1, "{FFFF00}Cari posisi {F58282}END{FFFF00} baru dan tekan FIRE.");
+                }
+                case 3: ShowSpeedDialog(playerid);
                 case 4: ShowPlayerDialog(playerid, DIALOG_EXPORTNAME, DIALOG_STYLE_INPUT, "{FFFFFF}Save Movement", "Masukkan nama untuk file ini:", "Save", "Back");
             }
             return 1;
@@ -334,15 +361,20 @@ hook OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         case DIALOG_MOVE_SPEED, DIALOG_ROT_SPEED:
         {
             if (!response) return ShowPlayerMenu(playerid);
-            if (!IsNumeric(inputtext)) {
+            
+            if (!IsStringNumeric(inputtext)) 
+            {
                 SendClientMessage(playerid, -1, "{F58282}Error:{FFFFFF} Masukkan angka saja!");
-                return ShowSpeedDialog(playerid, dialogid);
+                return ShowSpeedDialog(playerid);
             }
 
-            if (dialogid == DIALOG_MOVE_SPEED) {
+            if (dialogid == DIALOG_MOVE_SPEED) 
+            {
                 coordInfo[playerid][MoveSpeed] = strval(inputtext);
-                ShowSpeedDialog(playerid, DIALOG_ROT_SPEED);
-            } else {
+                ShowPlayerDialog(playerid, DIALOG_ROT_SPEED, DIALOG_STYLE_INPUT, "{FFFFFF}Rotation Settings", "Masukkan durasi rotasi (ms):", "Confirm", "Back");
+            } 
+            else 
+            {
                 coordInfo[playerid][RotSpeed] = strval(inputtext);
                 ShowPlayerMenu(playerid);
             }
@@ -459,6 +491,62 @@ public ExportMovement(playerid, inputtext[])
 // CORE FUNCTIONS
 //==========================================================================
 
+stock ProcessCameraPoint(playerid)
+{
+    GetPlayerCameraPos(playerid, fPX, fPY, fPZ);
+    GetPlayerCameraFrontVector(playerid, fVX, fVY, fVZ);
+    
+    object_x = fPX + (fVX * 5.0);
+    object_y = fPY + (fVY * 5.0);
+    object_z = fPZ + (fVZ * 5.0);
+
+    if (SettingFirstLoc[playerid])
+    {
+        coordInfo[playerid][StartX] = fPX;
+        coordInfo[playerid][StartY] = fPY;
+        coordInfo[playerid][StartZ] = fPZ;
+        coordInfo[playerid][StartLookX] = object_x;
+        coordInfo[playerid][StartLookY] = object_y;
+        coordInfo[playerid][StartLookZ] = object_z;
+
+        if (IsReSettingStart[playerid])
+        {
+            SendClientMessage(playerid, -1, "{8EFF8E}>{FFFFFF} Start point re-set!");
+            ShowPlayerMenu(playerid);
+            IsReSettingStart[playerid] = false;
+        }
+        else
+        {
+            SendClientMessage(playerid, -1, "{8EFF8E}Start point saved.");
+            SettingLastLoc[playerid] = true;
+            SettingFirstLoc[playerid] = false;
+        }
+    }
+    else if (SettingLastLoc[playerid])
+    {
+        coordInfo[playerid][EndX] = fPX;
+        coordInfo[playerid][EndY] = fPY;
+        coordInfo[playerid][EndZ] = fPZ;
+        coordInfo[playerid][EndLookX] = object_x;
+        coordInfo[playerid][EndLookY] = object_y;
+        coordInfo[playerid][EndLookZ] = object_z;
+
+        if (IsReSettingEnd[playerid])
+        {
+            SendClientMessage(playerid, -1, "{8EFF8E}>{FFFFFF} End point re-set!");
+            ShowPlayerMenu(playerid);
+            IsReSettingEnd[playerid] = false;
+        }
+        else
+        {
+            SendClientMessage(playerid, -1, "{8EFF8E}End point saved.");
+            SettingLastLoc[playerid] = false;
+            ShowSpeedDialog(playerid); 
+        }
+    }
+    return 1;
+}
+
 stock MoveCamera(playerid)
 {
     new Float:FV[3], Float:CP[3];
@@ -484,7 +572,6 @@ stock MoveCamera(playerid)
 
 stock GetNextCameraPosition(move_mode, const Float:CP[3], const Float:FV[3], &Float:X, &Float:Y, &Float:Z)
 {
-    // Menggunakan jarak offset yang besar untuk pergerakan halus (6000 unit)
     #define OFFSET_X (FV[0] * 6000.0)
     #define OFFSET_Y (FV[1] * 6000.0)
     #define OFFSET_Z (FV[2] * 6000.0)
@@ -544,10 +631,43 @@ stock CancelFlyMode(playerid)
     return 1;
 }
 
-stock IsNumeric(const string[]) 
+stock bool:IsStringNumeric(const szInput[]) 
 {
-    for (new i = 0, l = strlen(string); i < l; i++) {
-        if (string[i] < '0' || string[i] > '9') return 0;
+    if(!szInput[0]) return false;
+    for (new i = 0, l = strlen(szInput); i < l; i++) 
+    {
+        if (szInput[i] < '0' || szInput[i] > '9') return false;
     }
+    return true;
+}
+
+stock ShowSpeedDialog(playerid)
+{
+    new string[512];
+    format(string, sizeof(string), "{FFFFFF}Please enter the desired {F58282}movement{FFFFFF} duration in milliseconds\n\nCurrent movement speed: \t{F58282}%i ms\n{FFFFFF}Current rotation speed: \t{F58282}%i ms\n\n{CFCFCF}Note: 1000 ms = 1 detik", 
+        coordInfo[playerid][MoveSpeed], coordInfo[playerid][RotSpeed]);
+    
+    ShowPlayerDialog(playerid, DIALOG_MOVE_SPEED, DIALOG_STYLE_INPUT, "{FFFFFF}Movement Duration Settings", string, "{8EFF8E}Confirm", "{F58282}Cancel");
     return 1;
+}
+
+stock GetMoveDirectionFromKeys(updown, leftright)
+{
+    new direction = 0;
+    if (leftright < 0) // Tekan A (Kiri)
+    {
+        if (updown < 0) direction = MOVE_FWD_L;
+        else if (updown > 0) direction = MOVE_BACK_L;
+        else direction = MOVE_LEFT;
+    }
+    else if (leftright > 0) // Tekan D (Kanan)
+    {
+        if (updown < 0) direction = MOVE_FWD_R;
+        else if (updown > 0) direction = MOVE_BACK_R;
+        else direction = MOVE_RIGHT;
+    }
+    else if (updown < 0) direction = MOVE_FWD; // Tekan W (Maju)
+    else if (updown > 0) direction = MOVE_BACK; // Tekan S (Mundur)
+
+    return direction;
 }
