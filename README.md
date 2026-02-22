@@ -1,4 +1,4 @@
-# ## Camera-Editor-Fly --- Open.MP
+# Camera-Editor-Fly --- Open.MP
 
 Sistem editor kamera berbasis navigasi *free-roam* (fly mode) yang dirancang khusus untuk lingkungan **open.mp** dan **SA-MP**. Alat ini mempermudah pembuatan transisi sinematik dengan akurasi tinggi pada posisi koordinat dan arah pandang (*look-at*).
 
@@ -48,7 +48,7 @@ Script ini menggunakan `AttachCameraToPlayerObject` dengan objek transparan (**I
 ---
 
 <div align="center">
-  <p><b>Developed by engkqdev</b></p>
-  <img src="https://img.shields.io/badge/Status-Stable-green?style=flat-square" />
+  <p><b>Developed by Engkq</b></p>
+  <img src="https://img.shields.io/badge/Status-Beta Testing-green?style=flat-square" />
   <img src="https://img.shields.io/badge/Language-PAWN-orange?style=flat-square" />
 </div>
